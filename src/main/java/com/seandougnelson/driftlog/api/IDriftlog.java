@@ -2,7 +2,8 @@ package com.seandougnelson.driftlog.api;
 
 public interface IDriftlog {
 
-  public Log getLog(String fileName, int startAtLine);
-  public Log getDockerLog(String containerId, int startAtLine);
+  Log getLog(String filePath, int startAtLine);
+  Log getDockerLog(String containerId, int startAtLine);
+  LogDir getLogDir(String directoryPath);
 
 }
