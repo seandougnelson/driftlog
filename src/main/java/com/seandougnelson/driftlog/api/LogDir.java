@@ -38,4 +38,5 @@ public class LogDir implements Comparable<LogDir> {
   public int compareTo(LogDir l) {
     return this.name.compareTo(l.getName());
   }
+
 }
