@@ -6,6 +6,7 @@ import com.seandougnelson.driftlog.api.LogDir;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
+import com.spotify.docker.client.exceptions.DockerException;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -24,42 +25,38 @@ public class DriftlogImpl implements IDriftlog {
 
   public DriftlogImpl() {
     docker = new DefaultDockerClient("unix:///var/run/docker.sock");
+    try {
+      docker.info();
+      docker.version();
+    } catch (Exception e) {
+      System.err.println("Unable to connect to Docker. Verify that:\n  1. Docker is running and listening on a unix " +
+              "socket.\n  2. Unix socket is mounted to the container (e.g. 'docker run -v /var/run/docker" +
+              ".sock:/var/run/docker.sock container').");
+      System.exit(1);
+    }
 
     String extensions = System.getenv("LOG_EXTENSIONS");
     if (extensions != null) {
       logFileExtensions = extensions.split(",");
     } else {
-      logFileExtensions = new String[] {".log"};
+      logFileExtensions = new String[]{".log"};
     }
   }
 
   // TODO Only get logs from allowed dirs
-  public Log getLog(String filePath, int startAtLine) {
+  public Log getLog(String filePath, int startAtLine) throws IOException {
     String logName = filePath;
-
-    String[] logContent;
-    try (Stream<String> stream = Files.lines(Paths.get(filePath))) {
-      logContent = stream.skip(startAtLine).toArray(String[]::new);
-    } catch (IOException e) {
-      logContent = new String[] {"An error occurred while reading " + logName};
-      e.printStackTrace();
-    }
+    Stream<String> stream = Files.lines(Paths.get(filePath));
+    String[] logContent = stream.skip(startAtLine).toArray(String[]::new);
 
     return new Log(logName, logContent);
   }
 
-  public Log getDockerLog(String containerId, int startAtLine) {
+  public Log getDockerLog(String containerId, int startAtLine) throws DockerException, InterruptedException {
     String logName = "docker " + containerId;
+    LogStream stream = docker.logs(containerId, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr());
 
-    String content;
-    try (LogStream stream = docker.logs(containerId, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr())) {
-      content = stream.readFully();
-    } catch (Exception e) {
-      content = "An error occurred while reading " + logName;
-      e.printStackTrace();
-    }
-
-    String[] logContent = content.split("\\r?\\n");
+    String[] logContent = stream.readFully().split("\\r?\\n");
     if (startAtLine != 0) {
       String[] newLogContent = new String[Math.max(0, logContent.length - startAtLine)];
       for (int i = startAtLine; i < logContent.length; i++) {
@@ -73,23 +70,19 @@ public class DriftlogImpl implements IDriftlog {
 
   // TODO Env to specify allowed dirs
   // TODO Env to toggle subdirs
-  public LogDir getLogDir(String dirPath) {
-    LogDir logDir = null;
+  public LogDir getLogDir(String dirPath) throws IOException {
+    DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dirPath));
 
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dirPath))) {
-      logDir = new LogDir(Paths.get(dirPath).getFileName().toString());
-      for (Path entry : stream) {
-        if (entry.toFile().isDirectory()) {
-          LogDir subDir = getLogDir(entry.toAbsolutePath().toString());
-          if (subDir != null && !subDir.getLogs().isEmpty()) {
-            logDir.addSubDir(subDir);
-          }
-        } else if (Arrays.stream(logFileExtensions).anyMatch(entry.toString()::endsWith)) {
-          logDir.addLog(entry.getFileName().toString());
+    LogDir logDir = new LogDir(Paths.get(dirPath).getFileName().toString());
+    for (Path entry : stream) {
+      if (entry.toFile().isDirectory()) {
+        LogDir subDir = getLogDir(entry.toAbsolutePath().toString());
+        if (subDir != null && !subDir.getLogs().isEmpty()) {
+          logDir.addSubDir(subDir);
         }
+      } else if (Arrays.stream(logFileExtensions).anyMatch(entry.toString()::endsWith)) {
+        logDir.addLog(entry.getFileName().toString());
       }
-    } catch (IOException e) {
-      e.printStackTrace();
     }
 
     return logDir;
