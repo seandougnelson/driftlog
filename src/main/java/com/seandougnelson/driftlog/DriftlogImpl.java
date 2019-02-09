@@ -7,6 +7,7 @@ import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.exceptions.DockerException;
+import com.spotify.docker.client.messages.Container;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -14,7 +15,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Service
@@ -52,22 +55,6 @@ public class DriftlogImpl implements IDriftlog {
     return new Log(logName, logContent);
   }
 
-  public Log getDockerLog(String containerId, int startAtLine) throws DockerException, InterruptedException {
-    String logName = "docker " + containerId;
-    LogStream stream = docker.logs(containerId, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr());
-
-    String[] logContent = stream.readFully().split("\\r?\\n");
-    if (startAtLine != 0) {
-      String[] newLogContent = new String[Math.max(0, logContent.length - startAtLine)];
-      for (int i = startAtLine; i < logContent.length; i++) {
-        newLogContent[i - startAtLine] = logContent[i];
-      }
-      return new Log(logName, newLogContent);
-    }
-
-    return new Log(logName, logContent);
-  }
-
   // TODO Env to specify allowed dirs
   // TODO Env to toggle subdirs
   public LogDir getLogDir(String dirPath) throws IOException {
@@ -86,6 +73,39 @@ public class DriftlogImpl implements IDriftlog {
     }
 
     return logDir;
+  }
+
+  public Log getDockerLog(String containerId, int startAtLine) throws DockerException, InterruptedException {
+    String logName = "docker " + containerId;
+    LogStream stream = docker.logs(containerId, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr());
+
+    String[] logContent = stream.readFully().split("\\r?\\n");
+    if (startAtLine != 0) {
+      String[] newLogContent = new String[Math.max(0, logContent.length - startAtLine)];
+      for (int i = startAtLine; i < logContent.length; i++) {
+        newLogContent[i - startAtLine] = logContent[i];
+      }
+      return new Log(logName, newLogContent);
+    }
+
+    return new Log(logName, logContent);
+  }
+
+  public List<Container> getDockerContainers(String labels, boolean allContainers) throws DockerException,
+          InterruptedException {
+    List<DockerClient.ListContainersParam> params = new ArrayList<>();
+    if (labels != null) {
+      String[] labelsArray = labels.split(",");
+      for (String label : labelsArray) {
+        params.add(DockerClient.ListContainersParam.withLabel(label));
+
+      }
+    }
+    if (allContainers) {
+      params.add(DockerClient.ListContainersParam.allContainers());
+    }
+
+    return docker.listContainers(params.toArray(DockerClient.ListContainersParam[]::new));
   }
 
 }

@@ -4,6 +4,7 @@ import com.seandougnelson.driftlog.api.IDriftlog;
 import com.seandougnelson.driftlog.api.Log;
 import com.seandougnelson.driftlog.api.LogDir;
 import com.spotify.docker.client.exceptions.ContainerNotFoundException;
+import com.spotify.docker.client.messages.Container;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
+import java.util.List;
 
 @RestController
 public class DriftlogController {
@@ -41,6 +43,22 @@ public class DriftlogController {
     }
   }
 
+  @RequestMapping("/logDir")
+  public LogDir getLogDir(@RequestParam String path) {
+    try {
+      return driftlog.getLogDir(path);
+
+    } catch (NoSuchFileException e) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Directory '" + path + "' does not exist", e);
+    } catch (AccessDeniedException e) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No read access to directory '" + path + "'", e);
+    } catch (NotDirectoryException e) {
+      throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Not a directory: '" + path + "'", e);
+    } catch (Exception e) {
+      throw new UnexpectedException(e);
+    }
+  }
+
   @RequestMapping("/dockerLog")
   public Log getDockerLog(@RequestParam String containerId, @RequestParam(defaultValue = "0") int startAtLine) {
     try {
@@ -55,17 +73,12 @@ public class DriftlogController {
 
   }
 
-  @RequestMapping("/logDir")
-  public LogDir getLogDir(@RequestParam String path) {
+  @RequestMapping("/dockerContainers")
+  public List<Container> getDockerContainers(@RequestParam(required = false) String labels,
+                                             @RequestParam(defaultValue = "false") boolean allContainers) {
     try {
-      return driftlog.getLogDir(path);
+      return driftlog.getDockerContainers(labels, allContainers);
 
-    } catch (NoSuchFileException e) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Directory '" + path + "' does not exist", e);
-    } catch (AccessDeniedException e) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No read access to directory '" + path + "'", e);
-    } catch (NotDirectoryException e) {
-      throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Not a directory: '" + path + "'", e);
     } catch (Exception e) {
       throw new UnexpectedException(e);
     }
