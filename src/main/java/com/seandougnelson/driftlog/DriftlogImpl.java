@@ -78,7 +78,7 @@ public class DriftlogImpl implements IDriftlog {
     for (Path entry : stream) {
       if (entry.toFile().isDirectory()) {
         LogDir subDir = getLogDir(entry.toAbsolutePath().toString());
-        if (subDir != null && !subDir.getLogs().isEmpty()) {
+        if (subDir != null && (!subDir.getSubDirs().isEmpty() || !subDir.getLogs().isEmpty())) {
           logDir.addSubDir(subDir);
         }
       } else if (Arrays.stream(allowedLogExtensions).anyMatch(entry.toString()::endsWith)) {
