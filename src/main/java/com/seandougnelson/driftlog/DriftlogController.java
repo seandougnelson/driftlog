@@ -16,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -26,6 +27,17 @@ public class DriftlogController {
 
   @RequestMapping("/log")
   public Log getLog(@RequestParam String path, @RequestParam(defaultValue = "0") int startAtLine) {
+    if (!driftlog.logDirIsAllowed(path)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "File '" + path + "' not in ALLOWED_LOG_DIRS");
+    }
+    if (Paths.get(path).toFile().isDirectory()) {
+      throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Not a file: '" + path + "'");
+    }
+    if (!driftlog.logExtensionIsAllowed(path)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "File extension of '" + path + "' not in " +
+              "ALLOWED_LOG_EXTENSIONS");
+    }
+
     try {
       return driftlog.getLog(path, startAtLine);
 
@@ -33,11 +45,6 @@ public class DriftlogController {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File '" + path + "' does not exist", e);
     } catch (AccessDeniedException e) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No read access to file '" + path + "'", e);
-    } catch (UncheckedIOException e) {
-      if (e.getMessage().endsWith("Is a directory")) {
-        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Not a file: '" + path + "'", e);
-      }
-      throw new UnexpectedException(e);
     } catch (Exception e) {
       throw new UnexpectedException(e);
     }
@@ -45,6 +52,10 @@ public class DriftlogController {
 
   @RequestMapping("/logDir")
   public LogDir getLogDir(@RequestParam String path) {
+    if (!driftlog.logDirIsAllowed(path)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Directory '" + path + "' not in ALLOWED_LOG_DIRS");
+    }
+
     try {
       return driftlog.getLogDir(path);
 

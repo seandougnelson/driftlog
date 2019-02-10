@@ -8,6 +8,8 @@ import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.exceptions.DockerException;
 import com.spotify.docker.client.messages.Container;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -23,30 +25,44 @@ import java.util.stream.Stream;
 @Service
 public class DriftlogImpl implements IDriftlog {
 
+  private Logger logger = LoggerFactory.getLogger(DriftlogImpl.class);
   private DockerClient docker;
-  private String[] logFileExtensions;
+  private String[] allowedLogDirs;
+  private String[] allowedLogExtensions;
 
   public DriftlogImpl() {
+    boolean exitApplication = false;
+
     docker = new DefaultDockerClient("unix:///var/run/docker.sock");
     try {
       docker.info();
       docker.version();
     } catch (Exception e) {
-      System.err.println("Unable to connect to Docker. Verify that:\n  1. Docker is running and listening on a unix " +
-              "socket.\n  2. Unix socket is mounted to the container (e.g. 'docker run -v /var/run/docker" +
-              ".sock:/var/run/docker.sock driftlog:latest').");
+      logger.error("Unable to connect to Docker (verify that Docker is running and 'docker.sock' is mounted to the " +
+              "container)");
+      exitApplication = true;
+    }
+
+    String allowedDirs = System.getenv("ALLOWED_LOG_DIRS");
+    logger.error("The environment variable 'ALLOWED_LOG_DIRS' was not set");
+    if (allowedDirs == null) {
+      exitApplication = true;
+    }
+
+    if (exitApplication) {
+      logger.info("Exiting application...");
       System.exit(1);
     }
 
-    String extensions = System.getenv("LOG_EXTENSIONS");
+    allowedLogDirs = allowedDirs.split(",");
+    String extensions = System.getenv("ALLOWED_LOG_EXTENSIONS");
     if (extensions != null) {
-      logFileExtensions = extensions.split(",");
+      allowedLogExtensions = extensions.split(",");
     } else {
-      logFileExtensions = new String[]{".log"};
+      allowedLogExtensions = new String[]{".log"};
     }
   }
 
-  // TODO Only get logs from allowed dirs
   public Log getLog(String filePath, int startAtLine) throws IOException {
     String logName = filePath;
     Stream<String> stream = Files.lines(Paths.get(filePath));
@@ -55,8 +71,6 @@ public class DriftlogImpl implements IDriftlog {
     return new Log(logName, logContent);
   }
 
-  // TODO Env to specify allowed dirs
-  // TODO Env to toggle subdirs
   public LogDir getLogDir(String dirPath) throws IOException {
     DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dirPath));
 
@@ -67,12 +81,20 @@ public class DriftlogImpl implements IDriftlog {
         if (subDir != null && !subDir.getLogs().isEmpty()) {
           logDir.addSubDir(subDir);
         }
-      } else if (Arrays.stream(logFileExtensions).anyMatch(entry.toString()::endsWith)) {
+      } else if (Arrays.stream(allowedLogExtensions).anyMatch(entry.toString()::endsWith)) {
         logDir.addLog(entry.getFileName().toString());
       }
     }
 
     return logDir;
+  }
+
+  public boolean logDirIsAllowed(String path) {
+    return Arrays.stream(allowedLogDirs).anyMatch(path::startsWith);
+  }
+
+  public boolean logExtensionIsAllowed(String path) {
+    return Arrays.stream(allowedLogExtensions).anyMatch(path::endsWith);
   }
 
   public Log getDockerLog(String containerId, int startAtLine) throws DockerException, InterruptedException {
