@@ -34,7 +34,7 @@ public class DriftlogImpl implements IDriftlog {
     } catch (Exception e) {
       System.err.println("Unable to connect to Docker. Verify that:\n  1. Docker is running and listening on a unix " +
               "socket.\n  2. Unix socket is mounted to the container (e.g. 'docker run -v /var/run/docker" +
-              ".sock:/var/run/docker.sock container').");
+              ".sock:/var/run/docker.sock driftlog:latest').");
       System.exit(1);
     }
 
