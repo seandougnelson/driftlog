@@ -43,19 +43,19 @@ public class DriftlogImpl implements IDriftlog {
       exitApplication = true;
     }
 
-    String allowedDirs = System.getenv("ALLOWED_LOG_DIRS");
+    String allowedDirs = DriftlogApplication.getEnv(Env.ALLOWED_LOG_DIRS);
     if (allowedDirs == null) {
-      logger.error("The environment variable 'ALLOWED_LOG_DIRS' was not set");
+      DriftlogApplication.envNotSet(logger, Env.ALLOWED_LOG_DIRS);
       exitApplication = true;
     }
 
     if (exitApplication) {
-      logger.info("Exiting application...");
+      DriftlogApplication.exit(logger);
       System.exit(1);
     }
 
     allowedLogDirs = allowedDirs.split(",");
-    String extensions = System.getenv("ALLOWED_LOG_EXTENSIONS");
+    String extensions = DriftlogApplication.getEnv(Env.ALLOWED_LOG_EXTENSIONS);
     if (extensions != null) {
       allowedLogExtensions = extensions.split(",");
     } else {
