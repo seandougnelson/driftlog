@@ -31,30 +31,17 @@ public class DriftlogImpl implements IDriftlog {
   private String[] allowedLogExtensions;
 
   public DriftlogImpl() {
-    boolean exitApplication = false;
-
     docker = new DefaultDockerClient("unix:///var/run/docker.sock");
     try {
-      docker.info();
       docker.version();
     } catch (Exception e) {
       logger.error("Unable to connect to Docker (verify that Docker is running and 'docker.sock' is mounted to the " +
               "container)");
-      exitApplication = true;
+      DriftlogApplication.exit();
     }
 
-    String allowedDirs = DriftlogApplication.getEnv(Env.ALLOWED_LOG_DIRS);
-    if (allowedDirs == null) {
-      DriftlogApplication.envNotSet(logger, Env.ALLOWED_LOG_DIRS);
-      exitApplication = true;
-    }
-
-    if (exitApplication) {
-      DriftlogApplication.exit(logger);
-    }
-
-    allowedLogDirs = allowedDirs.split(",");
-    String extensions = DriftlogApplication.getEnv(Env.ALLOWED_LOG_EXTENSIONS);
+    allowedLogDirs = Env.ALLOWED_LOG_DIRS.getValue().split(",");
+    String extensions = Env.ALLOWED_LOG_EXTENSIONS.getValue();
     if (extensions != null) {
       allowedLogExtensions = extensions.split(",");
     } else {
