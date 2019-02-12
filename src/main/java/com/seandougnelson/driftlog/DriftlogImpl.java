@@ -44,8 +44,8 @@ public class DriftlogImpl implements IDriftlog {
     }
 
     String allowedDirs = System.getenv("ALLOWED_LOG_DIRS");
-    logger.error("The environment variable 'ALLOWED_LOG_DIRS' was not set");
     if (allowedDirs == null) {
+      logger.error("The environment variable 'ALLOWED_LOG_DIRS' was not set");
       exitApplication = true;
     }
 
