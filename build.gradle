@@ -1,14 +1,14 @@
 buildscript {
-	ext {
-		springBootVersion = '2.1.2.RELEASE'
-	}
-	repositories {
-		mavenCentral()
-	}
-	dependencies {
-		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-		classpath('com.bmuschko:gradle-docker-plugin:4.4.1')
-	}
+  ext {
+    springBootVersion = '2.1.2.RELEASE'
+  }
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    classpath('com.bmuschko:gradle-docker-plugin:4.4.1')
+  }
 }
 
 apply plugin: 'java'
@@ -21,32 +21,32 @@ version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
 
 repositories {
-	mavenCentral()
-	jcenter()
+  mavenCentral()
+  jcenter()
 }
 
 dependencies {
-	implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
-	implementation 'com.spotify:docker-client:8.15.0'
-	implementation 'org.glassfish.jersey.inject:jersey-hk2:2.28'
-	testImplementation "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
+  implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
+  implementation 'com.spotify:docker-client:8.15.0'
+  implementation 'org.glassfish.jersey.inject:jersey-hk2:2.28'
+  testImplementation "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
 }
 
 bootJar {
-	mainClassName = 'com.seandougnelson.driftlog.DriftlogApplication'
+  mainClassName = 'com.seandougnelson.driftlog.DriftlogApplication'
 }
 
 task copyDockerFiles(type: Copy) {
-	dependsOn 'bootJar'
-	from "${buildDir}/libs/driftlog-${version}.jar", 'Dockerfile'
-	into "${buildDir}/docker"
-	rename "driftlog-${version}.jar", 'driftlog.jar'
+  dependsOn 'bootJar'
+  from "${buildDir}/libs/driftlog-${version}.jar", 'Dockerfile'
+  into "${buildDir}/docker"
+  rename "driftlog-${version}.jar", 'driftlog.jar'
 }
 
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 task buildDockerImage(type: DockerBuildImage) {
-	dependsOn 'copyDockerFiles'
-	inputDir = file("${buildDir}/docker")
-	tags.add('driftlog:latest')
-	tags.add("driftlog:${version}")
+  dependsOn 'copyDockerFiles'
+  inputDir = file("${buildDir}/docker")
+  tags.add('driftlog:latest')
+  tags.add("driftlog:${version}")
 }
