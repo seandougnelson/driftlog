@@ -51,7 +51,6 @@ public class DriftlogImpl implements IDriftlog {
 
     if (exitApplication) {
       DriftlogApplication.exit(logger);
-      System.exit(1);
     }
 
     allowedLogDirs = allowedDirs.split(",");
