@@ -40,7 +40,7 @@ bootJar {
 
 task copyDockerFiles(type: Copy) {
   dependsOn 'bootJar'
-  from "${buildDir}/libs/driftlog-${version}.jar", 'Dockerfile'
+  from "${buildDir}/libs/driftlog-${version}.jar", 'docker/driftlog/Dockerfile'
   into "${buildDir}/docker"
   rename "driftlog-${version}.jar", 'driftlog.jar'
 }
