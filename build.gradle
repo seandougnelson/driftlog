@@ -45,9 +45,25 @@ task copyDockerFiles(type: Copy) {
   rename "driftlog-${version}.jar", 'driftlog.jar'
 }
 
+import com.bmuschko.gradle.docker.tasks.image.DockerRemoveImage
+task removeDockerImageWithVersionTag(type: DockerRemoveImage) {
+  targetImageId { "driftlog:${version}" }
+  onError { /* ignored */ }
+}
+task removeDockerImages(type: DockerRemoveImage) {
+  dependsOn 'removeDockerImageWithVersionTag'
+  targetImageId { 'driftlog:latest' }
+  onError { /* ignored */ }
+}
+task removeAllDockerImages(type: DockerRemoveImage) {
+  dependsOn 'removeDockerImages'
+  targetImageId { 'seandougnelson/openjdk-spring-boot:11-slim' }
+  onError { /* ignored */ }
+}
+
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-task buildDockerImage(type: DockerBuildImage) {
-  dependsOn 'copyDockerFiles'
+task buildDockerImages(type: DockerBuildImage) {
+  dependsOn 'removeDockerImages', 'copyDockerFiles'
   inputDir = file("${buildDir}/docker")
   tags.add('driftlog:latest')
   tags.add("driftlog:${version}")
