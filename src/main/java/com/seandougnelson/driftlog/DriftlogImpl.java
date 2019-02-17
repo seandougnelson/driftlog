@@ -8,8 +8,6 @@ import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.exceptions.DockerException;
 import com.spotify.docker.client.messages.Container;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,20 +23,13 @@ import java.util.stream.Stream;
 @Service
 public class DriftlogImpl implements IDriftlog {
 
-  private Logger logger = LoggerFactory.getLogger(DriftlogImpl.class);
   private DockerClient docker;
   private String[] allowedLogDirs;
   private String[] allowedLogExtensions;
 
   public DriftlogImpl() {
     docker = new DefaultDockerClient("unix:///var/run/docker.sock");
-    try {
-      docker.version();
-    } catch (Exception e) {
-      logger.error("Unable to connect to Docker (verify that Docker is running and 'docker.sock' is mounted to the " +
-              "container)");
-      DriftlogApplication.exit();
-    }
+    DriftlogApplication.testDockerConnection(docker);
 
     allowedLogDirs = Env.ALLOWED_LOG_DIRS.getValue().split(",");
     String extensions = Env.ALLOWED_LOG_EXTENSIONS.getValue();
@@ -49,6 +40,7 @@ public class DriftlogImpl implements IDriftlog {
     }
   }
 
+  @Override
   public Log getLog(String filePath, int startAtLine) throws IOException {
     String logName = filePath;
     Stream<String> stream = Files.lines(Paths.get(filePath));
@@ -57,6 +49,7 @@ public class DriftlogImpl implements IDriftlog {
     return new Log(logName, logContent);
   }
 
+  @Override
   public LogDir getLogDir(String dirPath) throws IOException {
     DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dirPath));
 
@@ -75,14 +68,17 @@ public class DriftlogImpl implements IDriftlog {
     return logDir;
   }
 
+  @Override
   public boolean logDirIsAllowed(String path) {
     return Arrays.stream(allowedLogDirs).anyMatch(path::startsWith);
   }
 
+  @Override
   public boolean logExtensionIsAllowed(String path) {
     return Arrays.stream(allowedLogExtensions).anyMatch(path::endsWith);
   }
 
+  @Override
   public Log getDockerLog(String containerId, int startAtLine) throws DockerException, InterruptedException {
     String logName = "docker " + containerId;
     LogStream stream = docker.logs(containerId, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr());
@@ -99,6 +95,7 @@ public class DriftlogImpl implements IDriftlog {
     return new Log(logName, logContent);
   }
 
+  @Override
   public List<Container> getDockerContainers(String labels, boolean allContainers) throws DockerException,
           InterruptedException {
     List<DockerClient.ListContainersParam> params = new ArrayList<>();

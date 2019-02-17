@@ -1,5 +1,6 @@
 package com.seandougnelson.driftlog;
 
+import com.spotify.docker.client.DockerClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -50,7 +51,17 @@ public class DriftlogApplication {
     driftlogApplication.run(args);
   }
 
-  public static void exit() {
+  public static void testDockerConnection(DockerClient docker) {
+    try {
+      docker.version();
+    } catch (Exception e) {
+      logger.error("Unable to connect to Docker (verify that Docker is running and 'docker.sock' is mounted to the " +
+              "container)");
+      exit();
+    }
+  }
+
+  private static void exit() {
     logger.info("Exiting application...");
     System.exit(1);
   }

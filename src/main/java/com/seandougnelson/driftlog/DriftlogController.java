@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.file.AccessDeniedException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Paths;
@@ -42,8 +41,6 @@ public class DriftlogController {
 
     } catch (NoSuchFileException e) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File '" + path + "' does not exist", e);
-    } catch (AccessDeniedException e) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No read access to file '" + path + "'", e);
     } catch (Exception e) {
       throw new UnexpectedException(e);
     }
@@ -60,8 +57,6 @@ public class DriftlogController {
 
     } catch (NoSuchFileException e) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Directory '" + path + "' does not exist", e);
-    } catch (AccessDeniedException e) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No read access to directory '" + path + "'", e);
     } catch (NotDirectoryException e) {
       throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Not a directory: '" + path + "'", e);
     } catch (Exception e) {
