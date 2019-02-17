@@ -5,7 +5,11 @@ public enum Env {
   DRIFTLOG_PASSWORD, ALLOWED_LOG_DIRS, ALLOWED_LOG_EXTENSIONS;
 
   public String getValue() {
-    return System.getenv(this.name());
+    String value = System.getenv(this.name());
+    if (value == null) {
+      value = System.getProperty(this.name());
+    }
+    return value;
   }
 
 }
